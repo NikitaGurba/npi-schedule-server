@@ -25,6 +25,16 @@ const schema = new mongoose.Schema({
     {
         type: Number,
         required: true
+    },
+    likes:
+    {
+        type: Object,
+        required: true
+    },
+    dislikes:
+    {
+        type: Object,
+        required: true
     }
 
 });
