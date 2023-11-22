@@ -1,14 +1,18 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const MAX_TEXT_LENGTH = 250;
 const app = express();
 require("dotenv").config();
+const request = require("request");
 const https = require("https");
 const fs = require("fs");
-const server = https.createServer({
-  key: fs.readFileSync(process.env.KEYS_PATH + "/server.key"),
-  cert: fs.readFileSync(process.env.KEYS_PATH + "/server.cert")
-},
-app);
+const server = https.createServer(
+  {
+    key: fs.readFileSync(process.env.KEYS_PATH + "/server.key"),
+    cert: fs.readFileSync(process.env.KEYS_PATH + "/server.cert"),
+  },
+  app
+);
 const { Server } = require("socket.io");
 const Comment = require("./model/Comment");
 const io = new Server(server, {
@@ -17,21 +21,61 @@ const io = new Server(server, {
   },
 });
 
+function isLetter(str) {
+  if (str.length === 1) {
+    if ((str.match(/[A-Z]/i) || str.match(/[А-Я]/i)) !== null) {
+      return true;
+    }
+  }
+  return false;
+}
+
 io.on("connection", (socket) => {
   socket.on("getData", async () => {
     const comments = await Comment.find({}).lean();
     socket.emit("takeData", comments);
   });
   socket.on("takeData", async (text, grade, lecturer) => {
-    const comment = new Object({
-      grade: grade,
-      text: text,
-      lecturer: lecturer,
-      date: new Date(),
-      name: "Anonymous",
-    });
+    let request_json = {
+      message: `условие: является ли этот отзыв приемлимым, без мата и оскорблений: '${text}', если это условие правдиво, ответь 'да', если нет, то сначала ответь 'нет', а потом напиши краткое пояснение`,
+      api_key: process.env.CHAD_API_KEY,
+    };
+    request.post(
+      "https://ask.chadgpt.ru/api/public/gpt-3.5",
+      { json: request_json },
+      async function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+          console.log(body.response);
+          if (body.response.slice(0, 3).toLowerCase().indexOf("да") !== -1) {
+            const comment = new Object({
+              grade: grade,
+              text: text.slice(0, MAX_TEXT_LENGTH),
+              lecturer: lecturer.slice(0, MAX_TEXT_LENGTH),
+              date: new Date(),
+              name: "Anonymous",
+            });
 
-    await Comment.collection.insertOne(comment);
+            await Comment.collection.insertOne(comment);
+            socket.emit("dataWriteSuccess");
+          } else {
+            let errorMessage = body.response.substr(
+              3,
+              body.response.length - 1
+            );
+            let errorArr = Array.from(errorMessage);
+            for (let i = 0; i < errorArr.length; i++) {
+              if (isLetter(errorArr[i]) === true) {
+                errorMessage = errorMessage.substr(i, errorMessage.length - 1);
+                break;
+              }
+            }
+            socket.emit("dataWriteFail", errorMessage);
+          }
+        } else {
+          socket.emit("dataWriteFail", error);
+        }
+      }
+    );
   });
   socket.on("getSpecificData", async (lecturer) => {
     const comments = await Comment.find({}).lean();
