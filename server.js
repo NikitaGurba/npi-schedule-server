@@ -21,24 +21,11 @@ const io = new Server(server, {
   },
 });
 
-function isLetter(str) {
-  if (str.length === 1) {
-    if ((str.match(/[A-Z]/i) || str.match(/[А-Я]/i)) !== null) {
-      return true;
-    }
-  }
-  return false;
-}
-
 io.on("connection", (socket) => {
   socket.on("getData", async () => {
     const comments = await Comment.find({}).lean();
     socket.emit("takeData", comments);
   });
-  socket.on("getIp", () => {
-    let address = socket.handshake.address
-    socket.emit("takeIp", address)
-  })
   socket.on("takeData", async (text, grade, lecturer) => {
     let request_json = {
       message: `условие: является ли этот отзыв приемлимым, без мата и оскорблений: '${text}', отвечай в json формате: "YES" или "NO"`,
@@ -72,6 +59,7 @@ io.on("connection", (socket) => {
   });
   socket.on("getSpecificData", async (lecturer) => {
     const comments = await Comment.find({}).lean();
+    console.log(comments)
     const newArr = [];
     comments.map((item) => {
       if (item.lecturer == lecturer) {
@@ -80,36 +68,34 @@ io.on("connection", (socket) => {
     });
     socket.emit("takeSpecificData", newArr);
   });
-  socket.on("like", async (id) => {
-    let address = socket.handshake.address
+  socket.on("like", async (id, ip) => {
     const comment = await Comment.findOne({_id: id});
     const likesList = comment.likes;
-    const index = likesList.indexOf(address)
+    const index = likesList.indexOf(ip)
     if (index !== -1)
     {
       likesList.splice(index, 1);
     }
     else
     {
-      likesList.push(address)
+      likesList.push(ip)
     }
     let newvalue = { $set: {likes: likesList} };
     socket.emit("takeLikes", likesList)
     await Comment.updateOne({_id: id}, newvalue);
     
   })
-  socket.on("dislike", async (id) => {
-    let address = socket.handshake.address
+  socket.on("dislike", async (id, ip) => {
     const comment = await Comment.findOne({_id: id});
     const dislikesList = comment.dislikes;
-    const index = dislikesList.indexOf(address)
+    const index = dislikesList.indexOf(ip)
     if (index !== -1)
     {
       dislikesList.splice(index, 1);
     }
     else
     {
-      dislikesList.push(address)
+      dislikesList.push(ip)
     }
     let newvalue = { $set: {dislikes: dislikesList} };
     socket.emit("takeDislikes", dislikesList)
