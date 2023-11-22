@@ -2,8 +2,13 @@ const express = require("express");
 const mongoose = require("mongoose");
 const app = express();
 require("dotenv").config();
-const http = require("http");
-const server = http.createServer(app);
+const https = require("https");
+const fs = require("fs");
+const server = https.createServer({
+  key: fs.readFileSync(process.env.KEYS_PATH + "/server.key"),
+  cert: fs.readFileSync(process.env.KEYS_PATH + "/server.cert")
+},
+app);
 const { Server } = require("socket.io");
 const Comment = require("./model/Comment");
 const io = new Server(server, {
