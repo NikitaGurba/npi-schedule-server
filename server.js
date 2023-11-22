@@ -35,6 +35,10 @@ io.on("connection", (socket) => {
     const comments = await Comment.find({}).lean();
     socket.emit("takeData", comments);
   });
+  socket.on("getIp", () => {
+    let address = socket.handshake.address
+    socket.emit("takeIp", address)
+  })
   socket.on("takeData", async (text, grade, lecturer) => {
     let request_json = {
       message: `условие: является ли этот отзыв приемлимым, без мата и оскорблений: '${text}', отвечай в json формате: "YES" или "NO"`,
@@ -76,6 +80,41 @@ io.on("connection", (socket) => {
     });
     socket.emit("takeSpecificData", newArr);
   });
+  socket.on("like", async (id) => {
+    let address = socket.handshake.address
+    const comment = await Comment.findOne({_id: id});
+    const likesList = comment.likes;
+    const index = likesList.indexOf(address)
+    if (index !== -1)
+    {
+      likesList.splice(index, 1);
+    }
+    else
+    {
+      likesList.push(address)
+    }
+    let newvalue = { $set: {likes: likesList} };
+    socket.emit("takeLikes", likesList)
+    await Comment.updateOne({_id: id}, newvalue);
+    
+  })
+  socket.on("dislike", async (id) => {
+    let address = socket.handshake.address
+    const comment = await Comment.findOne({_id: id});
+    const dislikesList = comment.dislikes;
+    const index = dislikesList.indexOf(address)
+    if (index !== -1)
+    {
+      dislikesList.splice(index, 1);
+    }
+    else
+    {
+      dislikesList.push(address)
+    }
+    let newvalue = { $set: {dislikes: dislikesList} };
+    socket.emit("takeDislikes", dislikesList)
+    await Comment.updateOne({_id: id}, newvalue);
+  })
 });
 
 async function start() {
