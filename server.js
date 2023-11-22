@@ -37,7 +37,7 @@ io.on("connection", (socket) => {
   });
   socket.on("takeData", async (text, grade, lecturer) => {
     let request_json = {
-      message: `условие: является ли этот отзыв приемлимым, без мата и оскорблений: '${text}', если это условие правдиво, ответь 'да', если нет, то сначала ответь 'нет', а потом напиши краткое пояснение`,
+      message: `условие: является ли этот отзыв приемлимым, без мата и оскорблений: '${text}', отвечай в json формате: "YES" или "NO"`,
       api_key: process.env.CHAD_API_KEY,
     };
     request.post(
@@ -46,7 +46,7 @@ io.on("connection", (socket) => {
       async function (error, response, body) {
         if (!error && response.statusCode == 200) {
           console.log(body.response);
-          if (body.response.slice(0, 3).toLowerCase().indexOf("да") !== -1) {
+          if (body.response.indexOf("YES") !== -1) {
             const comment = new Object({
               grade: grade,
               text: text.slice(0, MAX_TEXT_LENGTH),
@@ -58,18 +58,7 @@ io.on("connection", (socket) => {
             await Comment.collection.insertOne(comment);
             socket.emit("dataWriteSuccess");
           } else {
-            let errorMessage = body.response.substr(
-              3,
-              body.response.length - 1
-            );
-            let errorArr = Array.from(errorMessage);
-            for (let i = 0; i < errorArr.length; i++) {
-              if (isLetter(errorArr[i]) === true) {
-                errorMessage = errorMessage.substr(i, errorMessage.length - 1);
-                break;
-              }
-            }
-            socket.emit("dataWriteFail", errorMessage);
+            socket.emit("dataWriteFail", 'Недопустимый отзыв');
           }
         } else {
           socket.emit("dataWriteFail", error);
