@@ -44,6 +44,8 @@ io.on("connection", (socket) => {
               lecturer: lecturer.slice(0, MAX_TEXT_LENGTH),
               date: new Date(),
               name: "Anonymous",
+              likes: [],
+              dislikes: []
             });
 
             await Comment.collection.insertOne(comment);
