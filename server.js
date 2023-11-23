@@ -28,7 +28,7 @@ io.on("connection", (socket) => {
   });
   socket.on("takeData", async (text, grade, lecturer) => {
     let request_json = {
-      message: `условие: является ли этот отзыв приемлимым, без мата и оскорблений: '${text}', отвечай в json формате: "YES" или "NO"`,
+      message: `условие: является ли этот отзыв приемлимым(без мата, оскорблений и рекламы): '${text}', отвечай в json формате: "YES" или "NO"`,
       api_key: process.env.CHAD_API_KEY,
     };
     request.post(
