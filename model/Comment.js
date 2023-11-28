@@ -28,12 +28,12 @@ const schema = new mongoose.Schema({
     },
     likes:
     {
-        type: Object,
+        type: Array,
         required: true
     },
     dislikes:
     {
-        type: Object,
+        type: Array,
         required: true
     }
 
